@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unicode穷举计算器 - 鹰角网络角色名预测工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .function-box {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .function-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #444;
+        }
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px 5px 5px 0;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .clear-btn {
+            background-color: #f44336;
+        }
+        .clear-btn:hover {
+            background-color: #d32f2f;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8f5e8;
+            border-radius: 4px;
+            word-break: break-all;
+        }
+        .error {
+            background-color: #ffe8e8;
+            color: #d32f2f;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Unicode穷举计算器</h1>
+        <p style="text-align:center; color:#666;">鹰角网络角色名预测工具 - 支持任意长度Unicode字符序列</p>
+        
+        <div class="function-box">
+            <div class="function-title">功能1：字符串转序号</div>
+            <label>输入字符串：</label>
+            <input type="text" id="stringInput1" placeholder="请输入要转换的字符串">
+            <button onclick="calculateIndex()">计算序号</button>
+            <button class="clear-btn" onclick="clearStringInput1()">清空</button>
+            <div id="result1" class="result" style="display:none;"></div>
+        </div>
+        
+        <div class="function-box">
+            <div class="function-title">功能2：序号转字符串</div>
+            <label>输入序号（支持大整数）：</label>
+            <textarea id="indexInput2" placeholder="请输入要转换的序号" rows="3"></textarea>
+            <button onclick="calculateString()">计算字符串</button>
+            <button class="clear-btn" onclick="clearIndexInput2()">清空</button>
+            <div id="result2" class="result" style="display:none;"></div>
+        </div>
+        
+        <div class="warning">
+            <strong>重要提醒：</strong>本工具使用BigInt处理大数运算，支持任意长度的整数。功能2使用文本域输入序号以避免JavaScript Number精度限制。
+        </div>
+        
+        <div class="info">
+            <strong>说明：</strong><br>
+            本工具支持所有有效的Unicode字符，通过动态构建字符集实现。字符集按Unicode码点排序。<br>
+            穷举顺序：单字符→双字符→三字符…按Unicode码点顺序排列<br>
+            注意：字符集大小约为144,000个字符（包含平面0-16的有效字符）
+        </div>
+    </div>
+
+    <script>
+        // 获取Unicode字符总数（有效字符数量）
+        function getTotalUnicodeChars() {
+            let count = 0;
+            for (let i = 0; i <= 0x10FFFF; i++) {
+                // 跳过代理区和非字符
+                if ((i >= 0xD800 && i <= 0xDFFF) ||
+                    (i >= 0xFDD0 && i <= 0xFDEF) ||
+                    ((i & 0xFFFF) === 0xFFFE) ||
+                    ((i & 0xFFFF) === 0xFFFF)) {
+                    continue;
+                }
+                count++;
+            }
+            return count;
+        }
+
+        // 获取Unicode字符
+        function getUnicodeCharByIndex(index) {
+            let count = 0;
+            for (let i = 0; i <= 0x10FFFF; i++) {
+                // 跳过代理区和非字符
+                if ((i >= 0xD800 && i <= 0xDFFF) ||
+                    (i >= 0xFDD0 && i <= 0xFDEF) ||
+                    ((i & 0xFFFF) === 0xFFFE) ||
+                    ((i & 0xFFFF) === 0xFFFF)) {
+                    continue;
+                }
+                if (count === index) {
+                    return String.fromCodePoint(i);
+                }
+                count++;
+            }
+            return null;
+        }
+
+        // 获取字符的Unicode索引
+        function getUnicodeIndexForChar(char) {
+            const codepoint = char.codePointAt(0);
+            if ((codepoint >= 0xD800 && codepoint <= 0xDFFF) ||
+                (codepoint >= 0xFDD0 && codepoint <= 0xFDEF) ||
+                ((codepoint & 0xFFFF) === 0xFFFE) ||
+                ((codepoint & 0xFFFF) === 0xFFFF)) {
+                throw new Error(`字符 "${char}" (U+${codepoint.toString(16)}) 是无效的Unicode字符`);
+            }
+            
+            let index = 0;
+            for (let i = 0; i < codepoint; i++) {
+                // 跳过代理区和非字符
+                if ((i >= 0xD800 && i <= 0xDFFF) ||
+                    (i >= 0xFDD0 && i <= 0xFDEF) ||
+                    ((i & 0xFFFF) === 0xFFFE) ||
+                    ((i & 0xFFFF) === 0xFFFF)) {
+                    continue;
+                }
+                index++;
+            }
+            return index;
+        }
+        
+        const totalUnicodeChars = getTotalUnicodeChars();
+        const base = BigInt(totalUnicodeChars);
+
+        // 将字符串转换为对应的序号
+        function stringToIndex(str) {
+            if (str === '') return BigInt(0); // 空字符串对应索引0
+            
+            let result = BigInt(0);
+            
+            // 计算所有较短字符串的数量
+            for (let len = 1; len < str.length; len++) {
+                result += (base ** BigInt(len));
+            }
+            
+            // 计算当前长度字符串的偏移量
+            for (let i = 0; i < str.length; i++) {
+                const char = str[i];
+                let charIndex;
+                try {
+                    charIndex = getUnicodeIndexForChar(char);
+                } catch (e) {
+                    throw e;
+                }
+                
+                result += BigInt(charIndex) * (base ** BigInt(str.length - 1 - i));
+            }
+            
+            return result;
+        }
+        
+        // 将序号转换为对应的字符串
+        function indexToString(indexStr) {
+            let bigIndex = BigInt(indexStr);
+            if (bigIndex === BigInt(0)) return ''; // 索引0对应空字符串
+            
+            let total = BigInt(0);
+            let length = 1;
+            
+            // 找到字符串的长度
+            while (total + (base ** BigInt(length)) <= bigIndex) {
+                total += (base ** BigInt(length));
+                length++;
+            }
+            
+            let remaining = bigIndex - total;
+            let result = '';
+            
+            // 计算字符串内容
+            for (let i = 0; i < length; i++) {
+                const power = base ** BigInt(length - 1 - i);
+                const digit = remaining / power;
+                
+                const char = getUnicodeCharByIndex(Number(digit));
+                if (!char) {
+                    throw new Error(`无法找到索引为 ${Number(digit)} 的Unicode字符`);
+                }
+                
+                result += char;
+                remaining = remaining % power;
+            }
+            
+            return result;
+        }
+        
+        // 计算序号按钮点击事件
+        function calculateIndex() {
+            const inputStr = document.getElementById('stringInput1').value;
+            const resultDiv = document.getElementById('result1');
+            
+            try {
+                const index = stringToIndex(inputStr);
+                resultDiv.innerHTML = `序号: ${index.toString()}`;
+                resultDiv.className = 'result';
+                resultDiv.style.display = 'block';
+            } catch (e) {
+                resultDiv.innerHTML = `错误: ${e.message}`;
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+            }
+        }
+        
+        // 计算字符串按钮点击事件
+        function calculateString() {
+            const indexStr = document.getElementById('indexInput2').value.trim();
+            const resultDiv = document.getElementById('result2');
+            
+            if (indexStr === '') {
+                resultDiv.innerHTML = '请输入一个有效的序号';
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                return;
+            }
+            
+            // 验证输入是否为有效的大整数
+            if (!/^\d+$/.test(indexStr)) {
+                resultDiv.innerHTML = '请输入一个有效的非负整数';
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                return;
+            }
+            
+            try {
+                const str = indexToString(indexStr);
+                resultDiv.innerHTML = `字符串: "${str}"`;
+                resultDiv.className = 'result';
+                resultDiv.style.display = 'block';
+            } catch (e) {
+                resultDiv.innerHTML = `错误: ${e.message}`;
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+            }
+        }
+        
+        // 清空输入框
+        function clearStringInput1() {
+            document.getElementById('stringInput1').value = '';
+            document.getElementById('result1').style.display = 'none';
+        }
+        
+        function clearIndexInput2() {
+            document.getElementById('indexInput2').value = '';
+            document.getElementById('result2').style.display = 'none';
+        }
+        
+        // 绑定回车键事件
+        document.getElementById('stringInput1').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                calculateIndex();
+            }
+        });
+        
+        document.getElementById('indexInput2').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); // 防止换行
+                calculateString();
+            }
+        });
+    </script>
+</body>
+</html>
